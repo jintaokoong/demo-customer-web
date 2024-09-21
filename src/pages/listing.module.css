@@ -1,0 +1,23 @@
+.table {
+    @apply w-full text-sm;
+}
+
+.table thead {
+    @apply font-semibold;
+}
+
+.table tbody {
+    @apply text-gray-700;
+}
+
+.table th {
+    @apply bg-gray-600 text-white py-2 px-4 text-left;
+}
+
+.table td {
+    @apply py-2 px-4;
+}
+
+.table tr:not(:last-child) {
+    @apply border-b-2  border-gray-200;
+}

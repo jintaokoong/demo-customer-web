@@ -1,10 +1,13 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { NetError } from "../utils/net-error";
 import { ZodError, z } from "zod";
 import { ApiResponseSchema } from "../api-response.schema";
 import { CustomerSchema } from "../customer.schema";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import css from "./listing.module.css";
+import { formatDate } from "../utils/date";
+import Button from "../components/button";
 
 // API response schema definition
 const CustomerListingSchema = ApiResponseSchema(
@@ -70,6 +73,43 @@ const fetchCustomerListing = (page: number, limit: number) => {
 
       if (error instanceof Error) {
         // could be a network error
+        throw new NetError("network-error", error.message, error);
+      }
+
+      throw new NetError("unknown-error", error.message, error);
+    });
+};
+
+const deleteCustomer = (id: number) => {
+  const url = new URL(
+    `/api/customers/${id}`,
+    import.meta.env.VITE_API_BASE_URL,
+  );
+
+  return fetch(url, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        return response.text().then((message) => {
+          throw new NetError("server-error", message);
+        });
+      }
+      return Promise.resolve();
+    })
+    .catch((error) => {
+      if (error instanceof NetError) {
+        throw error;
+      }
+
+      if (error instanceof ZodError) {
+        throw new NetError("validation-error", error.message, error);
+      }
+
+      if (error instanceof Error) {
         throw new NetError("network-error", error.message, error);
       }
 
@@ -180,10 +220,35 @@ const Pagination = ({
 export default function Listing() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(5);
+  const qc = useQueryClient();
   const queryData = useQuery({
     queryKey: ["customer-listing", page, limit] as const,
     queryFn: ({ queryKey: [_, p, l] }) => fetchCustomerListing(p, l),
   });
+  const { variables, mutate, status } = useMutation({
+    mutationKey: ["delete-customer"],
+    mutationFn: (id: number) => deleteCustomer(id),
+    onSettled: () => {
+      // reset the page to 1
+      setPage(1);
+      // invalidate the query
+      qc.invalidateQueries({
+        queryKey: ["customer-listing", 1, limit],
+      });
+    },
+  });
+
+  const handleDelete = useCallback(
+    (id: number, name: string) => () => {
+      const confirm = window.confirm(
+        `Are you sure you want to delete ${name}?`,
+      );
+      if (confirm) {
+        mutate(id);
+      }
+    },
+    [mutate],
+  );
 
   if (queryData.status === "error") {
     const error = queryData.error as NetError;
@@ -195,9 +260,14 @@ export default function Listing() {
   }
 
   return (
-    <main>
-      <h1>List of Customers</h1>
-      <table style={{ width: "100%", textAlign: "center" }}>
+    <main className="p-2">
+      <section className="flex justify-between items-center mb-4 w-full">
+        <h1 className="text-2xl font-semibold">List of Customers</h1>
+        <Link to="register">
+          <Button>New Customer</Button>
+        </Link>
+      </section>
+      <table className={css.table}>
         <thead>
           <tr>
             <th>Name</th>
@@ -216,13 +286,23 @@ export default function Listing() {
               <td>{customer.email}</td>
               <td>{customer.contact}</td>
               <td>{customer.dob}</td>
-              <td>{customer.created_at.toISOString()}</td>
-              <td>{customer.updated_at.toISOString()}</td>
+              <td title={new Date(customer.created_at).toLocaleString()}>
+                {formatDate(customer.created_at)}
+              </td>
+              <td title={new Date(customer.updated_at).toLocaleString()}>
+                {formatDate(customer.updated_at)}
+              </td>
               <td>
                 <Link to={customer.id.toString()}>
-                  <button>Manage</button>
+                  <Button>Manage</Button>
                 </Link>{" "}
-                | <button>Delete</button>
+                <Button
+                  type="button"
+                  disabled={status === "pending" && variables === customer.id}
+                  onClick={handleDelete(customer.id, customer.name)}
+                >
+                  Delete
+                </Button>
               </td>
             </tr>
           ))}

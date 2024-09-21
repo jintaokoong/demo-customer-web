@@ -173,12 +173,6 @@ export default function ManageCustomer() {
 
   return (
     <main className="p-2">
-      <Link
-        className="text-blue-900 underline hover:text-blue-700"
-        to="/customers"
-      >
-        Back
-      </Link>
       <form
         className="space-y-2"
         onSubmit={(e) => {
@@ -269,6 +263,14 @@ export default function ManageCustomer() {
           </Button>
         )}
       </form>
+      <footer className="mt-4 text-center text-sm text-gray-500">
+        <Link
+          className="text-blue-900 underline hover:text-blue-700"
+          to="/customers"
+        >
+          Back to Customers
+        </Link>
+      </footer>
     </main>
   );
 }

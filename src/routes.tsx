@@ -13,7 +13,7 @@ const routes: RouteObject[] = [
     element: <ManageCustomer />,
   },
   {
-    path: "/customers/new",
+    path: "/customers/register",
     element: <RegisterCustomer />,
   },
   {
