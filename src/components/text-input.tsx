@@ -14,7 +14,6 @@ type TextInputProps = JSX.IntrinsicElements["input"] & {
 };
 
 const TextInput = ({ classes, label, ...p }: TextInputProps) => {
-  console.log(label);
   return (
     <div className={classes?.container}>
       <label

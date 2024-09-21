@@ -1,8 +1,8 @@
-import { ZodError } from "zod";
+import { ZodError, z } from "zod";
 import { CustomerSchema } from "../customer.schema";
 import { NetError } from "../utils/net-error";
-import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useParams } from "react-router-dom";
 import { ApiResponseSchema } from "../api-response.schema";
 import TextInput from "../components/text-input";
 import Button from "../components/button";
@@ -10,6 +10,14 @@ import { useState } from "react";
 
 // schema definition
 const GetCustomerSchema = ApiResponseSchema(CustomerSchema);
+
+const UpdateCustomerSchema = CustomerSchema.pick({
+  name: true,
+  email: true,
+  contact: true,
+  dob: true,
+});
+type UpdateCustomerRequest = z.infer<typeof UpdateCustomerSchema>;
 
 // api integration
 const fetchCustomer = (id: string) => {
@@ -49,6 +57,44 @@ const fetchCustomer = (id: string) => {
     });
 };
 
+const updateCustomer = (id: string, payload: UpdateCustomerRequest) => {
+  const url = new URL(
+    `/api/customers/${id}`,
+    import.meta.env.VITE_API_BASE_URL,
+  );
+
+  return fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        return response.text().then((message) => {
+          throw new NetError("server-error", message);
+        });
+      }
+      return response.json().then((data) => GetCustomerSchema.parseAsync(data));
+    })
+    .catch((error) => {
+      if (error instanceof NetError) {
+        throw error;
+      }
+
+      if (error instanceof ZodError) {
+        throw new NetError("validation-error", error.message, error);
+      }
+
+      if (error instanceof Error) {
+        throw new NetError("network-error", error.message, error);
+      }
+
+      throw new NetError("unknown-error", error.message, error);
+    });
+};
+
 type UseToggleOptions<TPositive, TNegative> = {
   positive: TPositive;
   negative: TNegative;
@@ -59,8 +105,12 @@ const useToggle = <TPositive, TNegative>(
 ) => {
   const [state, setState] = useState<TPositive | TNegative>(p.positive);
 
-  const toggle = () => {
-    setState(state === p.positive ? p.negative : p.positive);
+  const toggle = (value?: TPositive | TNegative) => {
+    if (value != null) {
+      setState(value);
+    } else {
+      setState(state === p.positive ? p.negative : p.positive);
+    }
   };
 
   return [state, toggle] as const;
@@ -71,9 +121,38 @@ export default function ManageCustomer() {
   if (!id) {
     throw new Error("Customer id missing");
   }
+  const qc = useQueryClient();
   const queryData = useQuery({
     queryKey: ["customer", id] as const,
     queryFn: ({ queryKey: [_, id] }) => fetchCustomer(id),
+  });
+  const { mutate, status } = useMutation({
+    mutationKey: ["update-customer", id] as const,
+    mutationFn: (param: UpdateCustomerRequest) => updateCustomer(id, param),
+    onMutate: (param) => {
+      // optimistic update
+      qc.setQueryData<z.infer<typeof GetCustomerSchema>>(
+        ["customer", id],
+        (old) => {
+          if (old == null) {
+            return old;
+          }
+          return { ...old, data: { ...old.data, ...param } };
+        },
+      );
+    },
+    onSettled: (resp, error) => {
+      if (resp != null) {
+        qc.setQueryData<z.infer<typeof GetCustomerSchema>>(
+          ["customer", id],
+          resp,
+        );
+      }
+
+      if (error != null) {
+        qc.invalidateQueries({ queryKey: ["customer", id] });
+      }
+    },
   });
   const [mode, toggle] = useToggle({
     positive: "view" as const,
@@ -94,13 +173,49 @@ export default function ManageCustomer() {
 
   return (
     <main className="p-2">
-      <section className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold w-fit">{data.name}'s Details</h1>
-        <Button type="button" onClick={toggle}>
-          {mode === "view" ? "Edit" : "Cancel"}
-        </Button>
-      </section>
-      <form>
+      <Link
+        className="text-blue-900 underline hover:text-blue-700"
+        to="/customers"
+      >
+        Back
+      </Link>
+      <form
+        className="space-y-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
+
+          const payload = Array.from(formData.entries()).reduce(
+            (acc, [key, value]) => {
+              acc[key] = value?.toString();
+              return acc;
+            },
+            {} as Record<string, string>,
+          );
+
+          // validate the payload before proceeding
+          const result = UpdateCustomerSchema.safeParse(payload);
+          if (!result.success) {
+            // handle validation errors
+            const msg = result.error.errors.map((e) => e.message).join(", ");
+            window.alert(`${msg}\nPlease correct the errors and try again.`);
+            return;
+          }
+
+          // proceed with the API call
+          mutate(result.data, {
+            onSuccess: () => toggle("view"),
+          });
+        }}
+      >
+        <section className="mb-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold w-fit capitalize">
+            {data.name}'s Details
+          </h1>
+          <Button type="reset" onClick={() => toggle()}>
+            {mode === "view" ? "Edit" : "Cancel"}
+          </Button>
+        </section>
         <TextInput
           id="name"
           label="Name"
@@ -135,6 +250,7 @@ export default function ManageCustomer() {
         <TextInput
           id="dob"
           label="Date of Birth"
+          type="date"
           defaultValue={data.dob}
           classes={{
             container: "w-full",
@@ -144,7 +260,11 @@ export default function ManageCustomer() {
         />
 
         {mode === "edit" && (
-          <Button type="submit" className="mt-2">
+          <Button
+            type="submit"
+            className="mt-2"
+            disabled={status === "pending"}
+          >
             Save
           </Button>
         )}
