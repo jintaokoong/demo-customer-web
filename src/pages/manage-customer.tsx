@@ -206,7 +206,7 @@ export default function ManageCustomer() {
           <h1 className="text-2xl font-bold w-fit capitalize">
             {data.name}'s Details
           </h1>
-          <Button type="reset" onClick={() => toggle()}>
+          <Button className="px-3 py-0.5" type="reset" onClick={() => toggle()}>
             {mode === "view" ? "Edit" : "Cancel"}
           </Button>
         </section>
@@ -218,16 +218,19 @@ export default function ManageCustomer() {
             container: "w-full",
             input: "w-full",
           }}
+          required
           readOnly={mode === "view"}
         />
         <TextInput
           id="email"
           label="Email"
+          type="email"
           defaultValue={data.email}
           classes={{
             container: "w-full",
             input: "w-full",
           }}
+          required
           readOnly={mode === "view"}
         />
 
@@ -239,6 +242,8 @@ export default function ManageCustomer() {
             container: "w-full",
             input: "w-full",
           }}
+          pattern="^\+60[1-9]{1}\d{8,9}$" // Malaysian phone number
+          title="Phone number must be in the format +60123456789"
           readOnly={mode === "view"}
         />
         <TextInput
@@ -251,12 +256,14 @@ export default function ManageCustomer() {
             input: "w-full",
           }}
           readOnly={mode === "view"}
+          max={new Date().toISOString().split("T")[0]}
+          title="Date of Birth cannot be in the future"
         />
 
         {mode === "edit" && (
           <Button
             type="submit"
-            className="mt-2"
+            className="mt-2 px-3 py-0.5"
             disabled={status === "pending"}
           >
             Save

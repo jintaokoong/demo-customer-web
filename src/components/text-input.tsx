@@ -28,7 +28,7 @@ const TextInput = ({ classes, label, ...p }: TextInputProps) => {
       <input
         name={p.id}
         className={twm(
-          "border-gray-300 border py-1 px-2 focus:outline-none focus:ring focus:ring-blue-400",
+          "border-gray-300 border py-1 px-2 focus:outline-none focus:ring focus:ring-blue-400 read-only:opacity-50",
           classes?.input,
         )}
         {...p}

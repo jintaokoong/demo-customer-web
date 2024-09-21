@@ -135,36 +135,27 @@ const Pagination = ({
 
   return (
     <nav aria-label="Page navigation">
-      <ul
-        style={{
-          display: "flex",
-          listStyle: "none",
-          padding: 0,
-          gap: "0.2rem",
-        }}
-      >
+      <ul className="space-x-1 flex items-center">
         {/* Previous Button */}
-        <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+        <li>
           <button
-            className="page-link"
+            className="disabled:opacity-50"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
             aria-label="Previous"
           >
-            Previous
+            &laquo;
           </button>
         </li>
 
         {/* First Page Button */}
         {pageNumbers[0] > 1 && (
           <>
-            <li className="page-item">
-              <button className="page-link" onClick={() => onPageChange(1)}>
-                1
-              </button>
+            <li>
+              <button onClick={() => onPageChange(1)}>1</button>
             </li>
-            <li className="page-item disabled">
-              <span className="page-link">...</span>
+            <li>
+              <span>...</span>
             </li>
           </>
         )}
@@ -173,7 +164,6 @@ const Pagination = ({
         {pageNumbers.map((number) => (
           <li key={number}>
             <button
-              className="page-link"
               onClick={() => onPageChange(number)}
               style={{ fontWeight: number === currentPage ? "bold" : "normal" }}
             >
@@ -185,14 +175,11 @@ const Pagination = ({
         {/* Last Page Button */}
         {pageNumbers[pageNumbers.length - 1] < totalPages && (
           <>
-            <li className="page-item disabled">
-              <span className="page-link">...</span>
+            <li>
+              <span>...</span>
             </li>
-            <li className="page-item">
-              <button
-                className="page-link"
-                onClick={() => onPageChange(totalPages)}
-              >
+            <li>
+              <button onClick={() => onPageChange(totalPages)}>
                 {totalPages}
               </button>
             </li>
@@ -200,16 +187,13 @@ const Pagination = ({
         )}
 
         {/* Next Button */}
-        <li
-          className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}
-        >
+        <li>
           <button
-            className="page-link"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
             aria-label="Next"
           >
-            Next
+            &raquo;
           </button>
         </li>
       </ul>

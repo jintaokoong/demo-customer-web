@@ -109,6 +109,7 @@ export default function RegisterCustomer() {
               container: "w-full",
               input: "w-full",
             }}
+            required
           />
           <TextInput
             id="email"
@@ -117,6 +118,8 @@ export default function RegisterCustomer() {
               container: "w-full",
               input: "w-full",
             }}
+            type="email"
+            required
           />
           <TextInput
             id="contact"
@@ -125,6 +128,8 @@ export default function RegisterCustomer() {
               container: "w-full",
               input: "w-full",
             }}
+            pattern="^\+60[1-9]{1}\d{8,9}$" // Malaysian phone number
+            title="Phone number must be in the format +60123456789"
           />
           <TextInput
             id="dob"
@@ -134,6 +139,8 @@ export default function RegisterCustomer() {
               container: "w-full",
               input: "w-full",
             }}
+            max={new Date().toISOString().split("T")[0]}
+            title="Date of Birth cannot be in the future"
           />
         </section>
         <Button

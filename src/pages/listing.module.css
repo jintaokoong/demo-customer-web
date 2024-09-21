@@ -21,3 +21,7 @@
 .table tr:not(:last-child) {
     @apply border-b-2  border-gray-200;
 }
+
+.table tr:hover {
+    @apply bg-gray-100;
+}
